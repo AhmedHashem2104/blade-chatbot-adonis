@@ -59,6 +59,7 @@
     "@langchain/anthropic": "^0.2.3",
     "@langchain/community": "^0.2.18",
     "@langchain/google-genai": "^0.0.21",
+    "@langchain/mongodb": "^0.0.4",
     "@langchain/openai": "^0.2.1",
     "@langchain/pinecone": "^0.0.7",
     "@llama-node/llama-cpp": "^0.1.6",
@@ -70,6 +71,7 @@
     "langchain": "^0.2.9",
     "llama-node": "^0.1.6",
     "luxon": "^3.4.4",
+    "mongodb": "^6.8.0",
     "mysql2": "^3.10.2",
     "reflect-metadata": "^0.2.2"
   },
