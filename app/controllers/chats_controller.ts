@@ -1,7 +1,5 @@
 import type { HttpContext } from '@adonisjs/core/http'
 import { ChatGoogleGenerativeAI, GoogleGenerativeAIEmbeddings } from '@langchain/google-genai'
-import { XataVectorSearch } from '@langchain/community/vectorstores/xata'
-import { BaseClient } from '@xata.io/client'
 import { Document } from '@langchain/core/documents'
 import { VectorDBQAChain } from 'langchain/chains'
 import { Client, ClientOptions } from '@elastic/elasticsearch'
@@ -9,6 +7,10 @@ import {
   ElasticClientArgs,
   ElasticVectorSearch,
 } from '@langchain/community/vectorstores/elasticsearch'
+import app from '@adonisjs/core/services/app'
+import { PDFLoader } from '@langchain/community/document_loaders/fs/pdf'
+import { TextLoader } from 'langchain/document_loaders/fs/text'
+import { DocxLoader } from '@langchain/community/document_loaders/fs/docx'
 
 export default class ChatsController {
   async askQuestion({ response, request }: HttpContext) {
@@ -27,21 +29,7 @@ export default class ChatsController {
       client: new Client(config),
       indexName: process.env.ELASTIC_INDEX ?? 'test_vectorstore02',
     }
-    // const getXataClient = () => {
-    //   if (!process.env.XATA_API_KEY) {
-    //     throw new Error('XATA_API_KEY not set')
-    //   }
 
-    //   if (!process.env.XATA_DB_URL) {
-    //     throw new Error('XATA_DB_URL not set')
-    //   }
-    //   const xata = new BaseClient({
-    //     databaseURL: process.env.XATA_DB_URL,
-    //     apiKey: process.env.XATA_API_KEY,
-    //     branch: process.env.XATA_BRANCH || 'main',
-    //   })
-    //   return xata
-    // }
     // Open AI API Key is required to use OpenAIEmbeddings, some other embeddings may also be used
     const embeddings = new GoogleGenerativeAIEmbeddings({
       apiKey: process.env.GOOGLE_API_KEY,
@@ -61,6 +49,8 @@ export default class ChatsController {
   }
 
   async store({ response, request }: HttpContext) {
+    const { content, type, fileType } = request.all()
+
     const config: ClientOptions = {
       node:
         process.env.ELASTIC_URL ??
@@ -76,21 +66,7 @@ export default class ChatsController {
       client: new Client(config),
       indexName: process.env.ELASTIC_INDEX ?? 'test_vectorstore02',
     }
-    // const getXataClient = () => {
-    //   if (!process.env.XATA_API_KEY) {
-    //     throw new Error('XATA_API_KEY not set')
-    //   }
 
-    //   if (!process.env.XATA_DB_URL) {
-    //     throw new Error('XATA_DB_URL not set')
-    //   }
-    //   const xata = new BaseClient({
-    //     databaseURL: process.env.XATA_DB_URL,
-    //     apiKey: process.env.XATA_API_KEY,
-    //     branch: process.env.XATA_BRANCH || 'main',
-    //   })
-    //   return xata
-    // }
     // Open AI API Key is required to use OpenAIEmbeddings, some other embeddings may also be used
     const embeddings = new GoogleGenerativeAIEmbeddings({
       apiKey: process.env.GOOGLE_API_KEY,
@@ -100,12 +76,52 @@ export default class ChatsController {
     // const table = 'vectors'
     const store = new ElasticVectorSearch(embeddings, clientArgs)
     // Add documents
-    const docs = [
-      new Document({
-        pageContent: request.body().content,
-        metadata: { foo: 'Xata' },
-      }),
-    ]
+    let docs: any[] = []
+    if (type === 'text')
+      docs = [
+        new Document({
+          pageContent: content,
+          metadata: { foo: 'Xata' },
+        }),
+      ]
+    else {
+      const file = request.file('file', {
+        size: '1mb', // Set the size limit for the file
+      })
+      console.log(file, fileType)
+
+      if (!file) {
+        return response.badRequest('No file uploaded')
+      }
+
+      if (!file.isValid) {
+        return response.badRequest(file.errors)
+      }
+
+      // Generate a unique name for the file
+      const fileName = `${new Date().getTime()}.${file.extname}`
+      // Move the file to the uploads directory
+      await file.move(app.tmpPath('uploads'), {
+        name: fileName,
+        overwrite: true,
+      })
+
+      let loader: any
+
+      if (fileType === 'application/pdf') {
+        loader = new PDFLoader(app.tmpPath('uploads', fileName))
+      } else if (fileType === 'text/plain') {
+        loader = new TextLoader(app.tmpPath('uploads', fileName))
+      } else if (
+        fileType === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+      ) {
+        console.log(`ahmed`)
+        loader = new DocxLoader(app.tmpPath('uploads', fileName))
+        console.log(loader)
+      }
+
+      docs = await loader.load()
+    }
     await store.addDocuments(docs)
 
     return response.json({

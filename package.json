@@ -71,8 +71,11 @@
     "langchain": "^0.2.9",
     "llama-node": "^0.1.6",
     "luxon": "^3.4.4",
+    "mammoth": "^1.8.0",
     "mongodb": "^6.8.0",
     "mysql2": "^3.10.2",
+    "node-llama-cpp": "^2.8.12",
+    "pdf-parse": "^1.1.1",
     "reflect-metadata": "^0.2.2"
   },
   "hotHook": {

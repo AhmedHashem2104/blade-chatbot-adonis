@@ -1,6 +1,0 @@
-{
-  "databaseURL": "https://Ahmed-Hashem-s-workspace-p0hdk9.us-east-1.xata.sh/db/blade-chatbot",
-  "codegen": {
-    "output": "src/xata.ts"
-  }
-}
